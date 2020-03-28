@@ -15,7 +15,7 @@ def fix(pdf_file):
     # - the `inplace=True` means that the data structure is changed and
     #   the duplicate rows are gone  
     df.drop_duplicates(subset=None, inplace=True)
-
+    df["ORG PHONE"] = df["ORG PHONE"].str.replace(r'\D+', '')
     # Write the results to a different file
     df.to_csv(pdf_file)
     text = open(pdf_file, "r")
