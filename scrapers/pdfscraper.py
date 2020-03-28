@@ -3,39 +3,27 @@ from tabula import read_pdf, convert_into
 import tabula as tabula
 import pandas as pd
 import shutil
+# Lets us change the district column data
+def changeData(df, original_word, new_word):
+    df["DIS"] = df["DIS"].str.replace(original_word, new_word)
 # Fixes up the excel file
 def fix(pdf_file):
     pdf_file_clean = pdf_file.replace(".csv", "")
     df = pd.read_csv(pdf_file, sep=",")
 
-    # Notes:
-    # - the `subset=None` means that every column is used 
-    #    to determine if two rows are different; to change that specify
-    #    the columns as an array
-    # - the `inplace=True` means that the data structure is changed and
-    #   the duplicate rows are gone  
     df.drop_duplicates(subset=None, inplace=True)
     df["ORG PHONE"] = df["ORG PHONE"].str.replace(r'\D+', '')
+
+    # Replaces the district with the respective names
+    changeData(df, "BX", "The Bronx")
+    changeData(df, "BK", "Brooklyn")
+    changeData(df, "QN", "Queens")
+    changeData(df, "NY", "New York")
+    changeData(df, "SI", "Staten Island")
+    changeData(df, "NTY", "New York")
     # Write the results to a different file
     df.to_csv(pdf_file)
-    text = open(pdf_file, "r")
-    text = ''.join([i for i in text]) \
-            .replace("BX", "The Bronx")
-    #text_strip(text, "BX", "Bronx")
-    text = ''.join([i for i in text]) \
-            .replace("BK", "Brooklyn")
-    text = ''.join([i for i in text]) \
-            .replace("QN", "Queens")
-    text = ''.join([i for i in text]) \
-            .replace("NY", "New York")
-    text = ''.join([i for i in text]) \
-            .replace("SI", "Staten Island")
-    text = ''.join([i for i in text]) \
-            .replace("()", "")
     
-    x = open(pdf_file,"w")
-    x.writelines(text)
-    x.close()
 
     
 
