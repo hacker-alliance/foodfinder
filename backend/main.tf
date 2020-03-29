@@ -32,3 +32,11 @@ resource "oci_core_vcn" "foodfinder_vcn" {
   cidr_block     = "10.0.0.0/16"
   compartment_id = "${var.tenancy_ocid}"
 }
+
+resource "oci_core_subnet" "public_subnet" {
+  display_name   = "public_subnet"
+  dns_label      = "public"
+  cidr_block     = "10.0.0.0/24"
+  vcn_id         = "${oci_core_vcn.foodfinder_vcn.id}"
+  compartment_id = "${var.tenancy_ocid}"
+}
