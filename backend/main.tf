@@ -77,3 +77,34 @@ resource "oci_core_route_table_attachment" "public_route_table_attachment" {
   subnet_id      = "${oci_core_subnet.public_subnet.id}"
   route_table_id = "${oci_core_route_table.public_route_table.id}"
 }
+resource "oci_apigateway_gateway" "backend_apigateway" {
+  compartment_id = "${oci_identity_compartment.foodfinder.id}"
+  endpoint_type  = "PUBLIC"
+  display_name   = "backend_apigateway"
+  subnet_id      = "${oci_core_subnet.public_subnet.id}"
+}
+data "oci_functions_functions" "foodfinder_api_function" {
+  application_id = "${oci_functions_application.foodfinder_app.id}"
+  display_name   = "api"
+}
+
+resource "oci_apigateway_deployment" "public_deployment" {
+  compartment_id = "${oci_identity_compartment.foodfinder.id}"
+  gateway_id     = "${oci_apigateway_gateway.backend_apigateway.id}"
+  path_prefix    = "/api"
+
+  specification {
+    routes {
+      methods = ["GET"]
+      path    = "/"
+      backend {
+        type        = "ORACLE_FUNCTIONS_BACKEND"
+        function_id = "${data.oci_functions_functions.foodfinder_api_function.functions[0].id}"
+      }
+    }
+  }
+}
+
+output "APIGatewayHostname" {
+  value = "${oci_apigateway_gateway.backend_apigateway.hostname}"
+}
