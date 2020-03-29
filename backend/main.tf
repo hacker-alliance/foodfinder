@@ -5,12 +5,14 @@ variable "private_key_path" {}
 variable "region" {}
 variable "autonomous_database_admin_password" {}
 
+
 provider "oci" {
   region           = "${var.region}"
   tenancy_ocid     = "${var.tenancy_ocid}"
   user_ocid        = "${var.user_ocid}"
   fingerprint      = "${var.fingerprint}"
   private_key_path = "${var.private_key_path}"
+
 }
 
 resource "oci_database_autonomous_database" "foodfinderDB" {
@@ -22,4 +24,11 @@ resource "oci_database_autonomous_database" "foodfinderDB" {
   db_name                  = "foodfinderDB"
   display_name             = "foodfinderDB"
   is_free_tier             = "true"
+}
+
+resource "oci_core_vcn" "foodfinder_vcn" {
+  display_name   = "foodfinder_vcn"
+  dns_label      = "foodfinder"
+  cidr_block     = "10.0.0.0/16"
+  compartment_id = "${var.tenancy_ocid}"
 }
