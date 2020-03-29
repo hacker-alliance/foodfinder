@@ -53,3 +53,27 @@ resource "oci_functions_application" "foodfinder_app" {
   display_name   = "foodfinder_app"
   subnet_ids     = ["${oci_core_subnet.public_subnet.id}"]
 }
+
+resource "oci_core_internet_gateway" "public_internet_gateway" {
+  #Required
+  compartment_id = "${oci_identity_compartment.foodfinder.id}"
+  vcn_id         = "${oci_core_vcn.foodfinder_vcn.id}"
+  display_name   = "public_internet_gateway"
+}
+
+resource "oci_core_route_table" "public_route_table" {
+  compartment_id = "${oci_identity_compartment.foodfinder.id}"
+  display_name   = "public_route_table"
+  vcn_id         = "${oci_core_vcn.foodfinder_vcn.id}"
+
+  route_rules {
+    network_entity_id = "${oci_core_internet_gateway.public_internet_gateway.id}"
+    destination       = "0.0.0.0/0"
+  }
+}
+
+resource "oci_core_route_table_attachment" "public_route_table_attachment" {
+  #Required 
+  subnet_id      = "${oci_core_subnet.public_subnet.id}"
+  route_table_id = "${oci_core_route_table.public_route_table.id}"
+}
