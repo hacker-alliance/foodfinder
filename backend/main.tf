@@ -62,6 +62,19 @@ resource "google_cloudfunctions_function" "api" {
   entry_point           = "handler"
 }
 
+resource "google_spanner_instance" "main" {
+  config       = "regional-us-east4"
+  display_name = "main-instance"
+}
+
+resource "google_spanner_database" "database" {
+  instance = google_spanner_instance.main.name
+  name     = "my-database"
+  ddl = [
+    "CREATE TABLE locations (locId INT64 NOT NULL, name STRING(50) NOT NULL, phone STRING(10) NOT NULL, city STRING(50) NOT NULL, state STRING(50) NOT NULL,country STRING(50) NOT NULL, days STRING(50) NOT NULL, hours STRING(50) NOT NULL) PRIMARY KEY(locId)",
+  ]
+}
+
 resource "google_endpoints_service" "openapi_service" {
   service_name   = var.ENDPOINTS_SERVICE_NAME
   project        = var.gcp-project
