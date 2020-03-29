@@ -108,3 +108,7 @@ resource "oci_apigateway_deployment" "public_deployment" {
 output "APIGatewayHostname" {
   value = "${oci_apigateway_gateway.backend_apigateway.hostname}"
 }
+
+output "functiondebug" {
+  value = "${data.oci_functions_functions.foodfinder_api_function.functions[0].id}"
+}
