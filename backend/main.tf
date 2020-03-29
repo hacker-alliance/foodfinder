@@ -126,6 +126,10 @@ output "ENDPOINTS_SERVICE_NAME_D" {
   value = trimprefix(google_cloud_run_service.endpoints-runtime.status[0].url, "https://")
 }
 
-output "API_Function_URL" {
+output "Function_URL_API" {
   value = google_cloudfunctions_function.api.https_trigger_url
+}
+
+output "Function_URL_SCR" {
+  value = google_cloudfunctions_function.scrape.https_trigger_url
 }
