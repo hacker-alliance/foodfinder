@@ -1,3 +1,9 @@
+# from google.cloud import spanner
+
+# spanner_client = spanner.Client()
+import os
+
+
 def handler(request):
     """Responds to any HTTP request.
     Args:
@@ -13,4 +19,5 @@ def handler(request):
     elif request_json and 'message' in request_json:
         return request_json['message']
     else:
-        return f'Hello World!'
+        # return f'Hello World!'
+        return str(os.environ.get('Spanner_Instance', 'NOT SET'))

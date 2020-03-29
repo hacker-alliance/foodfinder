@@ -21,7 +21,7 @@ data "archive_file" "scrape-zip" {
 }
 
 resource "google_storage_bucket_object" "scrape-zip" {
-  name   = "scrape.zip"
+  name   = "scrape-${data.archive_file.scrape-zip.output_base64sha256}.zip"
   bucket = google_storage_bucket.foodfinder.name
   source = "${path.module}/zips/scrape.zip"
 }
@@ -36,6 +36,10 @@ resource "google_cloudfunctions_function" "scrape" {
   source_archive_object = google_storage_bucket_object.scrape-zip.name
   trigger_http          = true
   entry_point           = "handler"
+  environment_variables = {
+    Spanner_Instance = google_spanner_instance.main.id
+    Spanner_Database = google_spanner_database.database.id
+  }
 }
 
 data "archive_file" "api-zip" {
@@ -45,21 +49,25 @@ data "archive_file" "api-zip" {
 }
 
 resource "google_storage_bucket_object" "api-zip" {
-  name   = "api.zip"
+  name   = "api-${data.archive_file.api-zip.output_base64sha256}.zip"
   bucket = google_storage_bucket.foodfinder.name
   source = "${path.module}/zips/api.zip"
 }
 
 resource "google_cloudfunctions_function" "api" {
-  name        = "api"
-  description = "api-function"
-  runtime     = "nodejs10"
-
+  name                  = "api"
+  description           = "api-function"
+  runtime               = "nodejs10"
   available_memory_mb   = 128
   source_archive_bucket = google_storage_bucket.foodfinder.name
   source_archive_object = google_storage_bucket_object.api-zip.name
   trigger_http          = true
   entry_point           = "handler"
+
+  environment_variables = {
+    Spanner_Instance = google_spanner_instance.main.id
+    Spanner_Database = google_spanner_database.database.id
+  }
 }
 
 resource "google_spanner_instance" "main" {
