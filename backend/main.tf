@@ -1,6 +1,7 @@
 variable "gcp-project" {}
 variable "region" {}
 variable "zone" {}
+variable "ENDPOINTS_SERVICE_NAME" {}
 
 provider "google" {
   credentials = "gcp-credentials.json"
@@ -37,9 +38,9 @@ resource "google_cloudfunctions_function" "api" {
 }
 
 resource "google_endpoints_service" "openapi_service" {
-  service_name   = "api.endpoints.${var.gcp-project}.cloud.goog"
+  service_name   = var.ENDPOINTS_SERVICE_NAME
   project        = var.gcp-project
-  openapi_config = templatefile("openapi_spec.yml", { project-id = var.gcp-project, region = var.region })
+  openapi_config = templatefile("openapi_spec.yml", { project-id = var.gcp-project, region = var.region, endpoints-service = var.ENDPOINTS_SERVICE_NAME })
 }
 
 resource "google_cloud_run_service" "endpoints-runtime" {
@@ -50,6 +51,10 @@ resource "google_cloud_run_service" "endpoints-runtime" {
     spec {
       containers {
         image = "gcr.io/endpoints-release/endpoints-runtime-serverless:2"
+        env {
+          name  = "ENDPOINTS_SERVICE_NAME"
+          value = var.ENDPOINTS_SERVICE_NAME
+        }
       }
     }
   }
@@ -71,12 +76,18 @@ resource "google_cloud_run_service_iam_policy" "gcr-noauth" {
   policy_data = data.google_iam_policy.noauth.policy_data
 }
 
-# IAM entry for all users to invoke the function
-resource "google_cloudfunctions_function_iam_member" "api-invoke" {
+resource "google_cloudfunctions_function_iam_binding" "invoker" {
   project        = google_cloudfunctions_function.api.project
   region         = google_cloudfunctions_function.api.region
   cloud_function = google_cloudfunctions_function.api.name
 
-  role   = "roles/cloudfunctions.invoker"
-  member = "allUsers"
+  role    = "roles/cloudfunctions.invoker"
+  members = ["allUsers"]
+}
+
+output "CONFIGURED_ENDPOINTS_SERVICE_NAME" {
+  value = var.ENDPOINTS_SERVICE_NAME
+}
+output "ENDPOINTS_SERVICE_NAME" {
+  value = trimprefix(google_cloud_run_service.endpoints-runtime.status[0].url, "https://")
 }
