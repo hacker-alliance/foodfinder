@@ -1,25 +1,131 @@
-variable "tenancy_ocid" {}
-variable "user_ocid" {}
-variable "fingerprint" {}
-variable "private_key_path" {}
+variable "gcp-project" {}
 variable "region" {}
-variable "autonomous_database_admin_password" {}
+variable "zone" {}
+variable "ENDPOINTS_SERVICE_NAME" {}
 
-provider "oci" {
-  region           = "${var.region}"
-  tenancy_ocid     = "${var.tenancy_ocid}"
-  user_ocid        = "${var.user_ocid}"
-  fingerprint      = "${var.fingerprint}"
-  private_key_path = "${var.private_key_path}"
+provider "google" {
+  credentials = "gcp-credentials.json"
+  project     = var.gcp-project
+  region      = var.region
+  zone        = var.zone
 }
 
-resource "oci_database_autonomous_database" "foodfinderDB" {
-  #Required
-  admin_password           = "${var.autonomous_database_admin_password}"
-  compartment_id           = "${var.tenancy_ocid}"
-  cpu_core_count           = "1"
-  data_storage_size_in_tbs = "1"
-  db_name                  = "foodfinderDB"
-  display_name             = "foodfinderDB"
-  is_free_tier             = "true"
+resource "google_storage_bucket" "foodfinder" {
+  name = "foodfinder"
+}
+
+data "archive_file" "scrape-zip" {
+  type        = "zip"
+  source_dir  = "${path.module}/scrape"
+  output_path = "${path.module}/zips/scrape.zip"
+}
+
+resource "google_storage_bucket_object" "scrape-zip" {
+  name   = "scrape.zip"
+  bucket = google_storage_bucket.foodfinder.name
+  source = "${path.module}/zips/scrape.zip"
+}
+
+resource "google_cloudfunctions_function" "scrape" {
+  name        = "scrape"
+  description = "scrape-function"
+  runtime     = "python37"
+
+  available_memory_mb   = 128
+  source_archive_bucket = google_storage_bucket.foodfinder.name
+  source_archive_object = google_storage_bucket_object.scrape-zip.name
+  trigger_http          = true
+  entry_point           = "handler"
+}
+
+data "archive_file" "api-zip" {
+  type        = "zip"
+  source_dir  = "${path.module}/api"
+  output_path = "${path.module}/zips/api.zip"
+}
+
+resource "google_storage_bucket_object" "api-zip" {
+  name   = "api.zip"
+  bucket = google_storage_bucket.foodfinder.name
+  source = "${path.module}/zips/api.zip"
+}
+
+resource "google_cloudfunctions_function" "api" {
+  name        = "api"
+  description = "api-function"
+  runtime     = "nodejs10"
+
+  available_memory_mb   = 128
+  source_archive_bucket = google_storage_bucket.foodfinder.name
+  source_archive_object = google_storage_bucket_object.api-zip.name
+  trigger_http          = true
+  entry_point           = "handler"
+}
+
+resource "google_endpoints_service" "openapi_service" {
+  service_name   = var.ENDPOINTS_SERVICE_NAME
+  project        = var.gcp-project
+  openapi_config = templatefile("openapi_spec.yml", { project-id = var.gcp-project, region = var.region, endpoints-service = var.ENDPOINTS_SERVICE_NAME })
+}
+
+resource "google_cloud_run_service" "endpoints-runtime" {
+  name     = "endpoints-runtime"
+  location = "us-east4"
+
+  template {
+    spec {
+      containers {
+        image = "gcr.io/endpoints-release/endpoints-runtime-serverless:2"
+        env {
+          name  = "ENDPOINTS_SERVICE_NAME"
+          value = var.ENDPOINTS_SERVICE_NAME
+        }
+      }
+    }
+  }
+}
+
+data "google_iam_policy" "noauth" {
+  binding {
+    role = "roles/run.invoker"
+    members = [
+      "allUsers",
+    ]
+  }
+}
+
+resource "google_cloud_run_service_iam_policy" "gcr-noauth" {
+  location    = google_cloud_run_service.endpoints-runtime.location
+  project     = google_cloud_run_service.endpoints-runtime.project
+  service     = google_cloud_run_service.endpoints-runtime.name
+  policy_data = data.google_iam_policy.noauth.policy_data
+}
+
+resource "google_cloudfunctions_function_iam_binding" "api-invoke" {
+  project        = google_cloudfunctions_function.api.project
+  region         = google_cloudfunctions_function.api.region
+  cloud_function = google_cloudfunctions_function.api.name
+
+  role    = "roles/cloudfunctions.invoker"
+  members = ["allUsers"]
+}
+
+resource "google_cloudfunctions_function_iam_binding" "scrape-invoke" {
+  project        = google_cloudfunctions_function.scrape.project
+  region         = google_cloudfunctions_function.scrape.region
+  cloud_function = google_cloudfunctions_function.scrape.name
+
+  role    = "roles/cloudfunctions.invoker"
+  members = ["allUsers"]
+}
+
+output "ENDPOINTS_SERVICE_NAME_C" {
+  value = var.ENDPOINTS_SERVICE_NAME
+}
+output "ENDPOINTS_SERVICE_NAME_D" {
+  value = trimprefix(google_cloud_run_service.endpoints-runtime.status[0].url, "https://")
+}
+
+output "API_Function_URL" {
+  value = google_cloudfunctions_function.api.https_trigger_url
 }
