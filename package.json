@@ -1,0 +1,24 @@
+{
+  "name": "foodfinder",
+  "version": "1.0.0",
+  "description": "LA Hacks 2020 / HooHacks 2020\r memes",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hacker-alliance/foodfinder.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/hacker-alliance/foodfinder/issues"
+  },
+  "homepage": "https://github.com/hacker-alliance/foodfinder#readme",
+  "dependencies": {
+    "eslint": "^6.8.0",
+    "eslint-config-airbnb-base": "^14.1.0",
+    "eslint-plugin-import": "^2.20.2"
+  }
+}
