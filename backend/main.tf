@@ -47,3 +47,9 @@ resource "oci_core_subnet" "public_subnet" {
   compartment_id = "${oci_identity_compartment.foodfinder.id}"
 }
 
+resource "oci_functions_application" "foodfinder_app" {
+  #Required
+  compartment_id = "${oci_identity_compartment.foodfinder.id}"
+  display_name   = "foodfinder_app"
+  subnet_ids     = ["${oci_core_subnet.public_subnet.id}"]
+}
