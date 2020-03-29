@@ -13,6 +13,31 @@ provider "google" {
 resource "google_storage_bucket" "foodfinder" {
   name = "foodfinder"
 }
+
+data "archive_file" "scrape-zip" {
+  type        = "zip"
+  source_dir  = "${path.module}/scrape"
+  output_path = "${path.module}/zips/scrape.zip"
+}
+
+resource "google_storage_bucket_object" "scrape-zip" {
+  name   = "scrape.zip"
+  bucket = google_storage_bucket.foodfinder.name
+  source = "${path.module}/zips/scrape.zip"
+}
+
+resource "google_cloudfunctions_function" "scrape" {
+  name        = "scrape"
+  description = "scrape-function"
+  runtime     = "python37"
+
+  available_memory_mb   = 128
+  source_archive_bucket = google_storage_bucket.foodfinder.name
+  source_archive_object = google_storage_bucket_object.scrape-zip.name
+  trigger_http          = true
+  entry_point           = "handler"
+}
+
 data "archive_file" "api-zip" {
   type        = "zip"
   source_dir  = "${path.module}/api"
@@ -76,7 +101,7 @@ resource "google_cloud_run_service_iam_policy" "gcr-noauth" {
   policy_data = data.google_iam_policy.noauth.policy_data
 }
 
-resource "google_cloudfunctions_function_iam_binding" "invoker" {
+resource "google_cloudfunctions_function_iam_binding" "api-invoke" {
   project        = google_cloudfunctions_function.api.project
   region         = google_cloudfunctions_function.api.region
   cloud_function = google_cloudfunctions_function.api.name
@@ -85,9 +110,22 @@ resource "google_cloudfunctions_function_iam_binding" "invoker" {
   members = ["allUsers"]
 }
 
-output "CONFIGURED_ENDPOINTS_SERVICE_NAME" {
+resource "google_cloudfunctions_function_iam_binding" "scrape-invoke" {
+  project        = google_cloudfunctions_function.scrape.project
+  region         = google_cloudfunctions_function.scrape.region
+  cloud_function = google_cloudfunctions_function.scrape.name
+
+  role    = "roles/cloudfunctions.invoker"
+  members = ["allUsers"]
+}
+
+output "ENDPOINTS_SERVICE_NAME_C" {
   value = var.ENDPOINTS_SERVICE_NAME
 }
-output "ENDPOINTS_SERVICE_NAME" {
+output "ENDPOINTS_SERVICE_NAME_D" {
   value = trimprefix(google_cloud_run_service.endpoints-runtime.status[0].url, "https://")
+}
+
+output "API_Function_URL" {
+  value = google_cloudfunctions_function.api.https_trigger_url
 }
