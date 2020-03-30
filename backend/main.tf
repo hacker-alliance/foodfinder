@@ -21,7 +21,7 @@ data "archive_file" "scrape-zip" {
 }
 
 resource "google_storage_bucket_object" "scrape-zip" {
-  name   = "scrape-${data.archive_file.scrape-zip.output_base64sha256}.zip"
+  name   = "scrape-${data.archive_file.scrape-zip.output_md5}.zip"
   bucket = google_storage_bucket.foodfinder.name
   source = "${path.module}/zips/scrape.zip"
 }
@@ -49,7 +49,7 @@ data "archive_file" "api-zip" {
 }
 
 resource "google_storage_bucket_object" "api-zip" {
-  name   = "api-${data.archive_file.api-zip.output_base64sha256}.zip"
+  name   = "api-${data.archive_file.api-zip.output_md5}.zip"
   bucket = google_storage_bucket.foodfinder.name
   source = "${path.module}/zips/api.zip"
 }
@@ -57,7 +57,7 @@ resource "google_storage_bucket_object" "api-zip" {
 resource "google_cloudfunctions_function" "api" {
   name                  = "api"
   description           = "api-function"
-  runtime               = "nodejs10"
+  runtime               = "nodejs8"
   available_memory_mb   = 128
   source_archive_bucket = google_storage_bucket.foodfinder.name
   source_archive_object = google_storage_bucket_object.api-zip.name
@@ -65,6 +65,7 @@ resource "google_cloudfunctions_function" "api" {
   entry_point           = "handler"
 
   environment_variables = {
+    Spanner_Project  = var.gcp-project
     Spanner_Instance = google_spanner_instance.main.name
     Spanner_Database = google_spanner_database.database.name
   }
@@ -83,44 +84,44 @@ resource "google_spanner_database" "database" {
   ]
 }
 
-resource "google_endpoints_service" "openapi_service" {
-  service_name   = var.ENDPOINTS_SERVICE_NAME
-  project        = var.gcp-project
-  openapi_config = templatefile("openapi_spec.yml", { project-id = var.gcp-project, region = var.region, endpoints-service = var.ENDPOINTS_SERVICE_NAME })
-}
+# resource "google_endpoints_service" "openapi_service" {
+#   service_name   = var.ENDPOINTS_SERVICE_NAME
+#   project        = var.gcp-project
+#   openapi_config = templatefile("openapi_spec.yml", { project-id = var.gcp-project, region = var.region, endpoints-service = var.ENDPOINTS_SERVICE_NAME })
+# }
 
-resource "google_cloud_run_service" "endpoints-runtime" {
-  name     = "endpoints-runtime"
-  location = "us-east4"
+# resource "google_cloud_run_service" "endpoints-runtime" {
+#   name     = "endpoints-runtime"
+#   location = "us-east4"
 
-  template {
-    spec {
-      containers {
-        image = "gcr.io/endpoints-release/endpoints-runtime-serverless:2"
-        env {
-          name  = "ENDPOINTS_SERVICE_NAME"
-          value = var.ENDPOINTS_SERVICE_NAME
-        }
-      }
-    }
-  }
-}
+#   template {
+#     spec {
+#       containers {
+#         image = "gcr.io/endpoints-release/endpoints-runtime-serverless:2"
+#         env {
+#           name  = "ENDPOINTS_SERVICE_NAME"
+#           value = var.ENDPOINTS_SERVICE_NAME
+#         }
+#       }
+#     }
+#   }
+# }
 
-data "google_iam_policy" "noauth" {
-  binding {
-    role = "roles/run.invoker"
-    members = [
-      "allUsers",
-    ]
-  }
-}
+# data "google_iam_policy" "noauth" {
+#   binding {
+#     role = "roles/run.invoker"
+#     members = [
+#       "allUsers",
+#     ]
+#   }
+# }
 
-resource "google_cloud_run_service_iam_policy" "gcr-noauth" {
-  location    = google_cloud_run_service.endpoints-runtime.location
-  project     = google_cloud_run_service.endpoints-runtime.project
-  service     = google_cloud_run_service.endpoints-runtime.name
-  policy_data = data.google_iam_policy.noauth.policy_data
-}
+# resource "google_cloud_run_service_iam_policy" "gcr-noauth" {
+#   location    = google_cloud_run_service.endpoints-runtime.location
+#   project     = google_cloud_run_service.endpoints-runtime.project
+#   service     = google_cloud_run_service.endpoints-runtime.name
+#   policy_data = data.google_iam_policy.noauth.policy_data
+# }
 
 resource "google_cloudfunctions_function_iam_binding" "api-invoke" {
   project        = google_cloudfunctions_function.api.project
@@ -140,12 +141,12 @@ resource "google_cloudfunctions_function_iam_binding" "scrape-invoke" {
   members = ["allUsers"]
 }
 
-output "ENDPOINTS_SERVICE_NAME_C" {
-  value = var.ENDPOINTS_SERVICE_NAME
-}
-output "ENDPOINTS_SERVICE_NAME_D" {
-  value = trimprefix(google_cloud_run_service.endpoints-runtime.status[0].url, "https://")
-}
+# output "ENDPOINTS_SERVICE_NAME_C" {
+#   value = var.ENDPOINTS_SERVICE_NAME
+# }
+# output "ENDPOINTS_SERVICE_NAME_D" {
+#   value = trimprefix(google_cloud_run_service.endpoints-runtime.status[0].url, "https://")
+# }
 
 output "Function_URL_API" {
   value = google_cloudfunctions_function.api.https_trigger_url
