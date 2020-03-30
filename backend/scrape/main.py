@@ -12,7 +12,7 @@ spanner_database = spanner_instance.database(
 def insertMockData(transaction):
     transaction.execute_update('DELETE FROM location WHERE true')
     transaction.execute_update(
-        "INSERT location (locId, name, phone, city, state, country, days, hours) VALUES (0, 'name', 'phone', 'city', 'state', 'country', 'days', 'hours')")
+        "INSERT location (locId, category, name, phone, street, city, state, country, days, hours) VALUES (0, 'category', 'name', 'phone', 'street', 'city', 'state', 'country', 'days', 'hours')")
 
 
 def handler(request):
