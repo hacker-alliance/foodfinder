@@ -37,8 +37,8 @@ resource "google_cloudfunctions_function" "scrape" {
   trigger_http          = true
   entry_point           = "handler"
   environment_variables = {
-    Spanner_Instance = google_spanner_instance.main.id
-    Spanner_Database = google_spanner_database.database.id
+    Spanner_Instance = google_spanner_instance.main.name
+    Spanner_Database = google_spanner_database.database.name
   }
 }
 
@@ -65,8 +65,8 @@ resource "google_cloudfunctions_function" "api" {
   entry_point           = "handler"
 
   environment_variables = {
-    Spanner_Instance = google_spanner_instance.main.id
-    Spanner_Database = google_spanner_database.database.id
+    Spanner_Instance = google_spanner_instance.main.name
+    Spanner_Database = google_spanner_database.database.name
   }
 }
 
