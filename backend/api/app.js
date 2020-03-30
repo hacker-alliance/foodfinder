@@ -18,7 +18,9 @@ function defaultRoute(req, res) {
 
 async function distributorsRoute(req, res) {
   const [rows] = await spannerDatabase.run(query);
-  res.send(rows);
+  const result = { locations: rows };
+
+  res.send(result);
 }
 
 app.use('/distributors', distributorsRoute);
