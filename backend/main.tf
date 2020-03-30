@@ -77,9 +77,9 @@ resource "google_spanner_instance" "main" {
 
 resource "google_spanner_database" "database" {
   instance = google_spanner_instance.main.name
-  name     = "my-database"
+  name     = "location-database"
   ddl = [
-    "CREATE TABLE locations (locId INT64 NOT NULL, name STRING(50) NOT NULL, phone STRING(10) NOT NULL, city STRING(50) NOT NULL, state STRING(50) NOT NULL,country STRING(50) NOT NULL, days STRING(50) NOT NULL, hours STRING(50) NOT NULL) PRIMARY KEY(locId)",
+    "CREATE TABLE location (locId INT64 NOT NULL, name STRING(50) NOT NULL, phone STRING(10) NOT NULL, city STRING(50) NOT NULL, state STRING(50) NOT NULL,country STRING(50) NOT NULL, days STRING(50) NOT NULL, hours STRING(50) NOT NULL) PRIMARY KEY(locId)",
   ]
 }
 

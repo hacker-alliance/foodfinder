@@ -9,6 +9,12 @@ spanner_database = spanner_instance.database(
     os.environ.get('Spanner_Database', 'NOT SET'))
 
 
+def insertMockData(transaction):
+    transaction.execute_update('DELETE FROM location WHERE true')
+    transaction.execute_update(
+        "INSERT location (locId, name, phone, city, state, country, days, hours) VALUES (0, 'name', 'phone', 'city', 'state', 'country', 'days', 'hours')")
+
+
 def handler(request):
     """Responds to any HTTP request.
     Args:
@@ -18,11 +24,7 @@ def handler(request):
         Response object using
         `make_response <http://flask.pocoo.org/docs/1.0/api/#flask.Flask.make_response>`.
     """
-    with spanner_database.snapshot() as snapshot:
-        results = snapshot.execute_sql('SELECT 1')
-
-        for row in results:
-            print(row)
+    spanner_database.run_in_transaction(insertMockData)
 
     request_json = request.get_json()
     if request.args and 'message' in request.args:
